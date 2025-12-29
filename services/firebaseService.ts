@@ -22,16 +22,29 @@ import {
 } from 'firebase/auth';
 import { Appointment, JobApplication, ApplicationStatus } from '../types';
 
-const firebaseConfig = {
-  apiKey: process.env.VITE_FIREBASE_API_KEY,
-  authDomain: process.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.VITE_FIREBASE_APP_ID,
-  measurementId: process.env.VITE_FIREBASE_MEASUREMENT_ID
+// Safe environment variable access for different environments
+const getEnv = (key: string) => {
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
+  }
+  try {
+    return (import.meta as any).env?.[key] || '';
+  } catch {
+    return '';
+  }
 };
 
+const firebaseConfig = {
+  apiKey: getEnv('VITE_FIREBASE_API_KEY'),
+  authDomain: getEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  projectId: getEnv('VITE_FIREBASE_PROJECT_ID'),
+  storageBucket: getEnv('VITE_FIREBASE_STORAGE_BUCKET'),
+  messagingSenderId: getEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
+  appId: getEnv('VITE_FIREBASE_APP_ID'),
+  measurementId: getEnv('VITE_FIREBASE_MEASUREMENT_ID')
+};
+
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const storage = getStorage(app);
@@ -68,16 +81,21 @@ export const submitJobApplication = async (data: JobApplication): Promise<boolea
     let passportPhotoUrl = '';
     let cvUrl = '';
 
+    // Handle File uploads if they are browser File objects
     if (data.passportPhoto instanceof File) {
       const photoRef = ref(storage, `applications/photos/${Date.now()}_${data.passportPhoto.name}`);
       const photoSnapshot = await uploadBytes(photoRef, data.passportPhoto);
       passportPhotoUrl = await getDownloadURL(photoSnapshot.ref);
+    } else if (typeof data.passportPhoto === 'string') {
+      passportPhotoUrl = data.passportPhoto;
     }
 
     if (data.cv instanceof File) {
       const cvRef = ref(storage, `applications/cvs/${Date.now()}_${data.cv.name}`);
       const cvSnapshot = await uploadBytes(cvRef, data.cv);
       cvUrl = await getDownloadURL(cvSnapshot.ref);
+    } else if (typeof data.cv === 'string') {
+      cvUrl = data.cv;
     }
 
     await addDoc(collection(db, 'applications'), {

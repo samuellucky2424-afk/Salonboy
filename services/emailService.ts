@@ -4,9 +4,11 @@ import emailjs from '@emailjs/browser';
  * EmailJS service for sending automated notifications.
  */
 
-const SERVICE_ID = process.env.VITE_EMAILJS_SERVICE_ID || '';
-const TEMPLATE_ID = process.env.VITE_EMAILJS_TEMPLATE_ID || '';
-const PUBLIC_KEY = process.env.VITE_EMAILJS_PUBLIC_KEY || '';
+const env = typeof process !== 'undefined' ? process.env : (import.meta as any).env;
+
+const SERVICE_ID = env.VITE_EMAILJS_SERVICE_ID || '';
+const TEMPLATE_ID = env.VITE_EMAILJS_TEMPLATE_ID || '';
+const PUBLIC_KEY = env.VITE_EMAILJS_PUBLIC_KEY || '';
 
 export const sendApprovalEmail = async (applicantData: any, approvalData: any) => {
   if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
