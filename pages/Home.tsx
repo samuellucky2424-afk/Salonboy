@@ -1,11 +1,44 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, PhoneCall, ShieldCheck, Users, Clock, HeartPulse } from 'lucide-react';
 import { SERVICES, DOCTORS, ICON_MAP } from '../constants';
 import DoctorCard from '../components/DoctorCard';
+import { getHomepageContent } from '../services/firebaseService';
 
 const Home: React.FC = () => {
+  const [content, setContent] = useState<any>(null);
+  const [heroTitle, setHeroTitle] = useState('Healing Hands, Caring Hearts, Brighter Futures.');
+  const [heroDescription, setHeroDescription] = useState('Experience world-class healthcare with a personal touch.');
+  const [managedDoctors, setManagedDoctors] = useState<any[]>([]);
+  const [managedServices, setManagedServices] = useState<any[]>([]);
+  const [managedCareers, setManagedCareers] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadContent();
+  }, []);
+
+  const loadContent = async () => {
+    const data = await getHomepageContent();
+    if (data) {
+      setContent(data);
+      setHeroTitle(data.heroTitle || heroTitle);
+      setHeroDescription(data.heroDescription || heroDescription);
+      setManagedDoctors(data.doctors || []);
+      setManagedServices(data.services || []);
+      setManagedCareers(data.careers || []);
+    }
+  };
+
+  const doctorsToDisplay = managedDoctors.length > 0 ? managedDoctors : DOCTORS;
+  const servicesToDisplay = managedServices.length > 0 ? managedServices : SERVICES;
+  const careersToDisplay = managedCareers.length > 0 ? managedCareers : [
+    { title: 'Global Recognition', desc: 'Work with the best in the industry with global standards.' },
+    { title: 'Continuous Growth', desc: 'Training and development programs for every staff member.' },
+    { title: 'Modern Facilities', desc: 'Access to the latest medical technology and equipment.' },
+    { title: 'Inclusive Culture', desc: 'A diverse and supportive work environment for all.' }
+  ];
+
   return (
     <div className="animate-fadeIn">
       {/* Hero Section */}
@@ -18,10 +51,15 @@ const Home: React.FC = () => {
                   Welcome to LuminaHealth
                 </span>
                 <h1 className="text-5xl lg:text-7xl font-extrabold text-gray-900 leading-tight">
-                  Healing Hands, <span className="text-teal-600">Caring Hearts</span>, Brighter Futures.
+                  {heroTitle.split('Caring Hearts').map((part, i) => (
+                    <span key={i}>
+                      {part}
+                      {i === 0 && <span className="text-teal-600">Caring Hearts</span>}
+                    </span>
+                  ))}
                 </h1>
                 <p className="mt-6 text-xl text-gray-600 max-w-lg leading-relaxed">
-                  Experience world-class healthcare with a personal touch. Our dedicated team of experts is here to ensure your well-being around the clock.
+                  {heroDescription}
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
@@ -95,10 +133,10 @@ const Home: React.FC = () => {
             <p className="text-gray-600">We provide a wide range of medical services tailored to meet the unique needs of every patient, using cutting-edge technology.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {SERVICES.map((service) => (
+            {servicesToDisplay.map((service: any) => (
               <div key={service.id} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
                 <div className="w-16 h-16 bg-teal-50 text-teal-600 rounded-2xl flex items-center justify-center mb-6">
-                  {ICON_MAP[service.icon]}
+                  {ICON_MAP[service.icon] || <HeartPulse className="w-8 h-8" />}
                 </div>
                 <h4 className="text-xl font-bold mb-3">{service.title}</h4>
                 <p className="text-gray-500 text-sm leading-relaxed mb-4">{service.description}</p>
@@ -151,7 +189,7 @@ const Home: React.FC = () => {
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {DOCTORS.slice(0, 4).map((doc) => (
+            {(managedDoctors.length > 0 ? managedDoctors : DOCTORS).slice(0, 4).map((doc: any) => (
               <DoctorCard key={doc.id} doctor={doc} />
             ))}
           </div>

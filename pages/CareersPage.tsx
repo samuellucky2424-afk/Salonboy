@@ -1,11 +1,23 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Upload, FileText, UserCircle, CheckCircle2, Briefcase } from 'lucide-react';
 import { JOB_ROLES } from '../constants';
-import { submitJobApplication } from '../services/firebaseService';
+import { submitJobApplication, getHomepageContent } from '../services/firebaseService';
 import { JobApplication } from '../types';
 
 const CareersPage: React.FC = () => {
+  const [careerBenefits, setCareerBenefits] = useState<any[]>([]);
+
+  useEffect(() => {
+    loadContent();
+  }, []);
+
+  const loadContent = async () => {
+    const data = await getHomepageContent();
+    if (data?.careers) {
+      setCareerBenefits(data.careers);
+    }
+  };
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -89,12 +101,12 @@ const CareersPage: React.FC = () => {
           {/* Why join us */}
           <div className="space-y-6">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Why LuminaHealth?</h3>
-            {[
+            {(careerBenefits.length > 0 ? careerBenefits : [
               { title: 'Global Recognition', desc: 'Work with the best in the industry with global standards.' },
               { title: 'Continuous Growth', desc: 'Training and development programs for every staff member.' },
               { title: 'Modern Facilities', desc: 'Access to the latest medical technology and equipment.' },
               { title: 'Inclusive Culture', desc: 'A diverse and supportive work environment for all.' }
-            ].map((item, i) => (
+            ]).map((item, i) => (
               <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
                 <h4 className="font-bold text-teal-600 mb-1">{item.title}</h4>
                 <p className="text-sm text-gray-500">{item.desc}</p>
