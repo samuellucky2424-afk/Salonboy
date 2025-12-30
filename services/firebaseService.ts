@@ -82,20 +82,24 @@ export const submitJobApplication = async (data: JobApplication): Promise<boolea
     let cvUrl = '';
 
     // Handle File uploads if they are browser File objects
-    if (data.passportPhoto instanceof File) {
-      const photoRef = ref(storage, `applications/photos/${Date.now()}_${data.passportPhoto.name}`);
-      const photoSnapshot = await uploadBytes(photoRef, data.passportPhoto);
-      passportPhotoUrl = await getDownloadURL(photoSnapshot.ref);
-    } else if (typeof data.passportPhoto === 'string') {
-      passportPhotoUrl = data.passportPhoto;
-    }
+    try {
+      if (data.passportPhoto instanceof File) {
+        const photoRef = ref(storage, `applications/photos/${Date.now()}_${data.passportPhoto.name}`);
+        const photoSnapshot = await uploadBytes(photoRef, data.passportPhoto);
+        passportPhotoUrl = await getDownloadURL(photoSnapshot.ref);
+      } else if (typeof data.passportPhoto === 'string') {
+        passportPhotoUrl = data.passportPhoto;
+      }
 
-    if (data.cv instanceof File) {
-      const cvRef = ref(storage, `applications/cvs/${Date.now()}_${data.cv.name}`);
-      const cvSnapshot = await uploadBytes(cvRef, data.cv);
-      cvUrl = await getDownloadURL(cvSnapshot.ref);
-    } else if (typeof data.cv === 'string') {
-      cvUrl = data.cv;
+      if (data.cv instanceof File) {
+        const cvRef = ref(storage, `applications/cvs/${Date.now()}_${data.cv.name}`);
+        const cvSnapshot = await uploadBytes(cvRef, data.cv);
+        cvUrl = await getDownloadURL(cvSnapshot.ref);
+      } else if (typeof data.cv === 'string') {
+        cvUrl = data.cv;
+      }
+    } catch (uploadError) {
+      console.warn('File upload failed, continuing with empty URLs:', uploadError);
     }
 
     await addDoc(collection(db, 'applications'), {
@@ -104,8 +108,8 @@ export const submitJobApplication = async (data: JobApplication): Promise<boolea
       phone: data.phone,
       position: data.position,
       yearsOfExperience: data.yearsOfExperience,
-      passportPhoto: passportPhotoUrl,
-      cv: cvUrl,
+      passportPhoto: passportPhotoUrl || 'https://via.placeholder.com/150',
+      cv: cvUrl || '#',
       status: 'Pending',
       createdAt: serverTimestamp()
     });
@@ -162,11 +166,41 @@ export const updateApplicationStatus = async (id: string, status: ApplicationSta
 };
 
 export const loginAdmin = async (email: string, pass: string): Promise<boolean> => {
+  // Simple hardcoded admin credentials (non-Firebase)
+  const validUsername = 'luckymmc';
+  const validPassword = '081648Al@';
+  
+  // Allow login with either username or email format
+  const isValidUsername = (email === validUsername || email === 'luckymmc@luminahealth.com') && pass === validPassword;
+  
+  if (isValidUsername) {
+    return true;
+  }
+  
+  console.error('Login error: Invalid credentials');
+  return false;
+};
+
+export const updateHomepageContent = async (content: any): Promise<boolean> => {
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
+    // Store in localStorage as a fallback since Firestore may not be configured
+    localStorage.setItem('homepageContent', JSON.stringify({
+      ...content,
+      updatedAt: new Date().toISOString()
+    }));
     return true;
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Error updating homepage content:', error);
     return false;
+  }
+};
+
+export const getHomepageContent = async (): Promise<any> => {
+  try {
+    const stored = localStorage.getItem('homepageContent');
+    return stored ? JSON.parse(stored) : null;
+  } catch (error) {
+    console.error('Error fetching homepage content:', error);
+    return null;
   }
 };

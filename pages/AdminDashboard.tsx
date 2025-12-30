@@ -13,14 +13,16 @@ import {
   ChevronRight,
   User,
   ExternalLink,
-  ShieldAlert
+  ShieldAlert,
+  Settings
 } from 'lucide-react';
 import { fetchAppointments, fetchApplications, updateApplicationStatus } from '../services/firebaseService';
 import { sendApprovalEmail } from '../services/emailService';
 import { Appointment, JobApplication } from '../types';
+import AdminCMS from './AdminCMS';
 
 const AdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'appointments' | 'applications'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'applications' | 'cms'>('appointments');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [selectedApp, setSelectedApp] = useState<JobApplication | null>(null);
@@ -130,6 +132,15 @@ const AdminDashboard: React.FC = () => {
             <Users className="w-5 h-5" />
             <span>Job Applications</span>
           </button>
+          <button 
+            onClick={() => setActiveTab('cms')}
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
+              activeTab === 'cms' ? 'bg-teal-50 text-teal-600 shadow-sm shadow-teal-600/10' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+          >
+            <Settings className="w-5 h-5" />
+            <span>Content Manager</span>
+          </button>
         </nav>
 
         <button 
@@ -160,10 +171,12 @@ const AdminDashboard: React.FC = () => {
           </div>
         </header>
 
-        {loading ? (
+        {loading && activeTab !== 'cms' ? (
           <div className="flex items-center justify-center h-64">
             <div className="w-12 h-12 border-4 border-teal-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
+        ) : activeTab === 'cms' ? (
+          <AdminCMS />
         ) : activeTab === 'appointments' ? (
           <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <table className="w-full text-left">

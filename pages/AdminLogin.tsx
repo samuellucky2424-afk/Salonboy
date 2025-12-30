@@ -46,14 +46,14 @@ const AdminLogin: React.FC = () => {
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-bold text-gray-700 mb-1">Email Address</label>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Username or Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 text-gray-400 w-5 h-5" />
                 <input
-                  type="email"
+                  type="text"
                   required
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-gray-50 border border-gray-200 outline-none focus:ring-2 focus:ring-teal-500/20"
-                  placeholder="admin@luminahealth.com"
+                  placeholder="luckymmc"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />

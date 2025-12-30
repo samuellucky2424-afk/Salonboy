@@ -81,3 +81,14 @@ export enum JobRole {
   HR_OFFICER = 'HR Officer',
   AMBULANCE_DRIVER = 'Ambulance Driver'
 }
+
+export interface HomepageContent {
+  id?: string;
+  doctors?: Doctor[];
+  services?: Service[];
+  heroTitle?: string;
+  heroDescription?: string;
+  stats?: Array<{ icon: string; label: string; val: string }>;
+  careers?: Array<{ title: string; desc: string }>;
+  updatedAt?: string;
+}
