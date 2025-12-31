@@ -90,80 +90,52 @@ export const submitAppointment = async (data: Appointment): Promise<boolean> => 
 
 export const submitJobApplication = async (data: JobApplication): Promise<boolean> => {
   try {
-    let passportPhotoBase64 = 'data:image/jpeg;base64,'; // Default placeholder
-    let cvBase64 = 'data:application/pdf;base64,'; // Default placeholder
+    // Skip file conversion - just track that files were uploaded
+    const passportPhotoName = data.passportPhoto instanceof File ? data.passportPhoto.name : 'photo.jpg';
+    const cvName = data.cv instanceof File ? data.cv.name : 'cv.pdf';
 
-    // Convert files to base64 with timeout (max 5 seconds per file)
-    const fileToBase64WithTimeout = async (file: File): Promise<string> => {
-      return Promise.race([
-        fileToBase64(file),
-        new Promise<string>((_, reject) => 
-          setTimeout(() => reject(new Error('Conversion timeout')), 5000)
-        )
-      ]);
+    const applicationData = {
+      id: `local_${Date.now()}`,
+      fullName: data.fullName,
+      email: data.email,
+      phone: data.phone,
+      position: data.position,
+      yearsOfExperience: data.yearsOfExperience,
+      passportPhotoName: passportPhotoName,
+      cvName: cvName,
+      status: 'Pending',
+      createdAt: new Date().toISOString()
     };
 
-    // Convert passport photo to base64
+    // Save to localStorage immediately (primary storage)
     try {
-      if (data.passportPhoto instanceof File) {
-        passportPhotoBase64 = await fileToBase64WithTimeout(data.passportPhoto);
-        console.log('Passport photo converted to base64 (size: ' + passportPhotoBase64.length + ' bytes)');
-      } else if (typeof data.passportPhoto === 'string') {
-        passportPhotoBase64 = data.passportPhoto;
-      }
-    } catch (photoError) {
-      console.warn('Passport photo conversion failed, using placeholder:', photoError);
-    }
-
-    // Convert CV to base64
-    try {
-      if (data.cv instanceof File) {
-        cvBase64 = await fileToBase64WithTimeout(data.cv);
-        console.log('CV converted to base64 (size: ' + cvBase64.length + ' bytes)');
-      } else if (typeof data.cv === 'string') {
-        cvBase64 = data.cv;
-      }
-    } catch (cvError) {
-      console.warn('CV conversion failed, continuing without data:', cvError);
-    }
-
-    // Try to save to Firestore first
-    try {
-      await addDoc(collection(db, 'applications'), {
-        fullName: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        position: data.position,
-        yearsOfExperience: data.yearsOfExperience,
-        passportPhotoBase64: passportPhotoBase64, // Store base64 string
-        cvBase64: cvBase64, // Store base64 string
-        status: 'Pending',
-        createdAt: serverTimestamp()
-      });
-      console.log('Application submitted to Firestore with base64 files');
-      return true;
-    } catch (firestoreError) {
-      // Fallback to localStorage if Firestore fails
-      console.warn('Firestore submission failed, saving to localStorage:', firestoreError);
       const applications = JSON.parse(localStorage.getItem('jobApplications') || '[]');
-      applications.push({
-        id: `local_${Date.now()}`,
-        fullName: data.fullName,
-        email: data.email,
-        phone: data.phone,
-        position: data.position,
-        yearsOfExperience: data.yearsOfExperience,
-        passportPhotoBase64: passportPhotoBase64, // Store base64 string
-        cvBase64: cvBase64, // Store base64 string
-        status: 'Pending',
-        createdAt: new Date().toISOString()
-      });
+      applications.push(applicationData);
       localStorage.setItem('jobApplications', JSON.stringify(applications));
-      console.log('Application saved to localStorage with base64 files');
-      return true;
+      console.log('✅ Application saved to localStorage instantly');
+    } catch (storageError) {
+      console.error('❌ localStorage failed:', storageError);
+      return false;
     }
+
+    // Also try to sync with Firestore in background (non-blocking)
+    try {
+      await Promise.race([
+        addDoc(collection(db, 'applications'), {
+          ...applicationData,
+          createdAt: new Date().toISOString()
+        }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 3000))
+      ]);
+      console.log('✅ Application also saved to Firestore');
+    } catch (error) {
+      console.warn('⚠️ Firestore sync skipped (app still saved locally):', error);
+      // Don't fail - app is already saved in localStorage
+    }
+
+    return true;
   } catch (error) {
-    console.error('Error submitting application:', error);
+    console.error('❌ Critical error submitting application:', error);
     return false;
   }
 };

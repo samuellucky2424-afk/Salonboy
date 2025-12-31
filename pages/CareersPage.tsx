@@ -38,6 +38,18 @@ const CareersPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate form
+    if (!formData.fullName || !formData.email || !formData.phone || !formData.position) {
+      alert('Please fill in all required fields');
+      return;
+    }
+    
+    if (!formData.passportPhoto || !formData.cv) {
+      alert('Please upload both passport photo and CV');
+      return;
+    }
+    
     setIsSubmitting(true);
     
     // Construct valid application object
@@ -53,20 +65,33 @@ const CareersPage: React.FC = () => {
       createdAt: new Date().toISOString()
     };
 
-    const success = await submitJobApplication(application);
-    if (success) {
-      setIsSuccess(true);
-      // Clean up form
-      setFormData({
-        fullName: '',
-        email: '',
-        phone: '',
-        position: '',
-        yearsOfExperience: 0,
-        passportPhoto: null as File | null,
-        cv: null as File | null
-      });
+    try {
+      // Use a timeout - max 3 seconds to submit
+      const result = await Promise.race([
+        submitJobApplication(application),
+        new Promise<boolean>((_, reject) => 
+          setTimeout(() => reject(new Error('Submission timeout')), 3000)
+        )
+      ]);
+      
+      if (result) {
+        setIsSuccess(true);
+        // Clean up form
+        setFormData({
+          fullName: '',
+          email: '',
+          phone: '',
+          position: '',
+          yearsOfExperience: 0,
+          passportPhoto: null as File | null,
+          cv: null as File | null
+        });
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      alert('There was an issue submitting your application. Please try again.');
     }
+    
     setIsSubmitting(false);
   };
 
