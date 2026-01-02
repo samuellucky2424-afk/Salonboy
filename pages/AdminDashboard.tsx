@@ -51,7 +51,7 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   const loadData = async () => {
-    // Show local data immediately if available to reduce perceived loading time
+    // Show local data instantly
     const localApps = JSON.parse(localStorage.getItem('jobApplications') || '[]');
     if (localApps.length > 0) {
       setApplications(localApps);
@@ -59,14 +59,15 @@ const AdminDashboard: React.FC = () => {
     
     setLoading(true);
     try {
+      // Fetch concurrently with timeout
       const [appsData, jobsData] = await Promise.all([
-        fetchAppointments(),
-        fetchApplications()
+        fetchAppointments().catch(() => []),
+        fetchApplications().catch(() => localApps)
       ]);
       setAppointments(appsData);
       setApplications(jobsData);
     } catch (err) {
-      console.error("Data load error:", err);
+      console.error("Dashboard refresh error:", err);
     } finally {
       setLoading(false);
     }

@@ -90,7 +90,6 @@ export const submitAppointment = async (data: Appointment): Promise<boolean> => 
 
 export const submitJobApplication = async (data: JobApplication): Promise<boolean> => {
   try {
-    // Skip file conversion - just track that files were uploaded
     const passportPhotoName = data.passportPhoto instanceof File ? data.passportPhoto.name : 'photo.jpg';
     const cvName = data.cv instanceof File ? data.cv.name : 'cv.pdf';
 
@@ -107,35 +106,32 @@ export const submitJobApplication = async (data: JobApplication): Promise<boolea
       createdAt: new Date().toISOString()
     };
 
-    // Save to localStorage immediately (primary storage)
+    // Save locally first for instant feedback
     try {
       const applications = JSON.parse(localStorage.getItem('jobApplications') || '[]');
       applications.push(applicationData);
       localStorage.setItem('jobApplications', JSON.stringify(applications));
-      console.log('✅ Application saved to localStorage instantly');
     } catch (storageError) {
-      console.error('❌ localStorage failed:', storageError);
-      return false;
+      console.error('localStorage error:', storageError);
     }
 
-    // Also try to sync with Firestore in background (non-blocking)
+    // Try Firestore with 3s timeout
     try {
       await Promise.race([
         addDoc(collection(db, 'applications'), {
           ...applicationData,
-          createdAt: new Date().toISOString()
+          createdAt: serverTimestamp()
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 3000))
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
       ]);
-      console.log('✅ Application also saved to Firestore');
-    } catch (error) {
-      console.warn('⚠️ Firestore sync skipped (app still saved locally):', error);
-      // Don't fail - app is already saved in localStorage
+      console.log('Firestore sync complete');
+    } catch (syncError) {
+      console.warn('Firestore sync skipped (saved locally)', syncError);
     }
 
     return true;
   } catch (error) {
-    console.error('❌ Critical error submitting application:', error);
+    console.error('Submission error:', error);
     return false;
   }
 };
