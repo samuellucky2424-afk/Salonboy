@@ -51,14 +51,25 @@ const AdminDashboard: React.FC = () => {
   }, []);
 
   const loadData = async () => {
+    // Show local data immediately if available to reduce perceived loading time
+    const localApps = JSON.parse(localStorage.getItem('jobApplications') || '[]');
+    if (localApps.length > 0) {
+      setApplications(localApps);
+    }
+    
     setLoading(true);
-    const [appsData, jobsData] = await Promise.all([
-      fetchAppointments(),
-      fetchApplications()
-    ]);
-    setAppointments(appsData);
-    setApplications(jobsData);
-    setLoading(false);
+    try {
+      const [appsData, jobsData] = await Promise.all([
+        fetchAppointments(),
+        fetchApplications()
+      ]);
+      setAppointments(appsData);
+      setApplications(jobsData);
+    } catch (err) {
+      console.error("Data load error:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {

@@ -142,43 +142,57 @@ export const submitJobApplication = async (data: JobApplication): Promise<boolea
 
 export const fetchAppointments = async (): Promise<Appointment[]> => {
   try {
-    const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(d => ({ 
-      id: d.id, 
-      ...d.data(),
-      createdAt: d.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
-    } as Appointment));
+    // Try Firestore with 2s timeout
+    const appointmentsPromise = (async () => {
+      const q = query(collection(db, 'appointments'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(),
+        createdAt: d.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+      } as Appointment));
+    })();
+
+    return await Promise.race([
+      appointmentsPromise,
+      new Promise<Appointment[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+    ]);
   } catch (error) {
-    console.error('Error fetching appointments:', error);
+    console.warn('Appointment fetch timed out or failed, using empty list');
     return [];
   }
 };
 
 export const fetchApplications = async (): Promise<JobApplication[]> => {
+  // Get local apps immediately
+  const getLocalApps = () => JSON.parse(localStorage.getItem('jobApplications') || '[]') as JobApplication[];
+  
   try {
-    // Try to fetch from Firestore
-    const q = query(collection(db, 'applications'), orderBy('createdAt', 'desc'));
-    const snapshot = await getDocs(q);
-    const firestoreApps = snapshot.docs.map(d => ({ 
-      id: d.id, 
-      ...d.data(),
-      createdAt: d.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
-    } as JobApplication));
+    // Try Firestore with 2s timeout
+    const firestorePromise = (async () => {
+      const q = query(collection(db, 'applications'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(d => ({ 
+        id: d.id, 
+        ...d.data(),
+        createdAt: d.data().createdAt?.toDate?.()?.toISOString() || new Date().toISOString()
+      } as JobApplication));
+    })();
+
+    const firestoreApps = await Promise.race([
+      firestorePromise,
+      new Promise<JobApplication[]>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000))
+    ]);
     
-    // Also get any applications saved in localStorage
-    const localApps = JSON.parse(localStorage.getItem('jobApplications') || '[]') as JobApplication[];
-    
-    // Combine and sort by date
+    const localApps = getLocalApps();
     const allApps = [...firestoreApps, ...localApps].sort((a, b) => 
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
     
     return allApps;
   } catch (error) {
-    console.error('Error fetching applications, falling back to localStorage:', error);
-    // Fallback to localStorage only
-    return JSON.parse(localStorage.getItem('jobApplications') || '[]') as JobApplication[];
+    console.warn('Application fetch timed out, using local data only');
+    return getLocalApps();
   }
 };
 
