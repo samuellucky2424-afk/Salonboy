@@ -119,6 +119,9 @@ const AdminDashboard: React.FC = () => {
         setApprovalMessage('Processing email...');
         
         try {
+          // Log data before sending to debug
+          console.log('Sending email to:', selectedApp.email, 'Data:', selectedApp);
+          
           const emailResult = await Promise.race([
             sendApprovalEmail(selectedApp, approvalForm),
             new Promise<{success: boolean; message: string}>((resolve) => 

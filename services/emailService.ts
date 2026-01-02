@@ -46,9 +46,15 @@ export const sendApprovalEmail = async (applicantData: any, approvalData: any): 
   }
 
   try {
+    const toEmail = applicantData.email || applicantData.to_email;
+    if (!toEmail) {
+      console.error('Recipient email is missing in applicantData:', applicantData);
+      return { success: false, message: 'Recipient email address is missing' };
+    }
+
     const templateParams = {
       to_name: applicantData.fullName,
-      to_email: applicantData.email,
+      to_email: toEmail,
       approved_position: approvalData.approvedPosition,
       amount: approvalData.amount,
       application_fee: approvalData.applicationFee,
